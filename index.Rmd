@@ -1,36 +1,245 @@
 ---
-title: "Untitled"
+title: "Tablero de control Covid19 Costa Rica"
+author: "Carolina Guzmán"
 output: 
-  flexdashboard::flex_dashboard:
-    orientation: columns
-    vertical_layout: fill
+    flexdashboard::flex_dashboard:
+    vertical_layout: fill  
 ---
+
+Page 1
+===================================== 
 
 ```{r setup, include=FALSE}
 library(flexdashboard)
-```
+library(sf)
+library(leaflet)
+library(knitr)
+library(kableExtra)
+library(dplyr)
+library(RColorBrewer)
+library(tidyr)
+library(graphics)
+library(ggplot2)
+library(tidyverse)
 
+# Registros de presencia de confirmados de Covid
+covid19_cantones = st_read("https://raw.githubusercontent.com/geoprocesamiento-2020i/datos/master/covid19/casos/cr/cr-covid19-cantones.geojson")
+covid19_cantones_simp1 = st_simplify(covid19_cantones, dTolerance = 1000)
+covid19_cantones = st_transform(covid19_cantones, 4326)
+covid19_cantones[is.na(covid19_cantones)] = 0
+```
+    
 Column {data-width=650}
 -----------------------------------------------------------------------
 
-### Chart A
+
+### Mapa de distribución de confirmados de Covid19 por cantón
 
 ```{r}
+pal <- colorNumeric(
+  palette = "Oranges",
+  domain = covid19_cantones$confirmados)
 
+leaflet(covid19_cantones) %>%
+  addTiles()  %>% 
+  setView( lat=10, lng=-83.7534256 , zoom=7) %>%
+  addPolygons( 
+    fillColor = ~pal(confirmados), 
+    stroke=TRUE, 
+    fillOpacity = 0.9, 
+    color="white", 
+    weight=0.3,
+    popup = paste("Canton: ", covid19_cantones$canton, "<br>",
+                   "Confirmados: ", covid19_cantones$confirmados, "<br>",
+                   "Fallecidos: ", covid19_cantones$fallecidos, "<br>",
+                  "Recuperados: ", covid19_cantones$recuperados,"<br>",
+                  "Activos: ", covid19_cantones$activos, "<br>"))
+
+  
 ```
 
 Column {data-width=350}
 -----------------------------------------------------------------------
 
-### Chart B
+### Confirmados 
+
+```{r}
+covid19_cantones[is.na(covid19_cantones)] = 0
+suma <- sum(covid19_cantones$confirmados)           
+valueBox(suma, icon = "fa-users", color = "orange")
+```
+
+### Registro de casos confirmados por cantón 
+
+```{r}
+covid19_cantones %>%
+  select(Confirmados=confirmados, Cantón=canton) %>%
+  arrange(Confirmados) %>%
+  st_drop_geometry() %>%
+  kable()%>%
+  kable_styling() %>%
+  scroll_box(
+    width = "600px", 
+    height = "400px", 
+    fixed_thead = TRUE
+  )
+  
+```
+
+
+   
+Page 2
+=====================================     
+
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+
+
+### Mapa de distribución de confirmados de Covid19 por PROVINCIA
 
 ```{r}
 
+
+provincias_covid19 <- covid19_cantones %>%
+group_by(provincia) %>%
+summarize(confirmados1 = sum(confirmados, na.rm = TRUE), recuperados1 = sum(recuperados, na.rm = TRUE), muertes1 = sum(muertes, na.rm = TRUE), activos1 = sum(activos, na.rm = TRUE), area1 = sum(area, na.rm = TRUE))
+
+pal <- colorNumeric(
+  palette = "Oranges",
+  domain = provincias_covid19$confirmados1)
+
+leaflet(provincias_covid19) %>%
+  addTiles() %>%
+  setView( lat=10, lng=-83.7534256 , zoom=7) %>%
+  addPolygons( 
+    fillColor = ~pal(confirmados1), 
+    stroke=TRUE, 
+    fillOpacity = 0.9, 
+    color="white", 
+    weight=0.3,
+    popup = paste("Provincia: ", provincias_covid19$provincia, "<br>",
+                   "Confirmados: ", provincias_covid19$confirmados1, "<br>",
+                   "Fallecidos: ", provincias_covid19$fallecidos1, "<br>",
+                  "Recuperados: ", provincias_covid19$recuperados1,"<br>",
+                  "Activos: ", provincias_covid19$activos1, "<br>"))
+
+
 ```
 
-### Chart C
+
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+
+### Confirmados 
 
 ```{r}
+provincias_covid19[is.na(provincias_covid19)] = 0
+suma <- sum(provincias_covid19$confirmados1)           
+valueBox(suma, icon = "fa-users", color = "orange")
+```
+
+### Registro de casos confirmados por Provincia 
+
+```{r}
+provincias_covid19 %>%
+  select(Confirmados=confirmados1, Provincia=provincia) %>%
+  arrange(Confirmados) %>%
+  st_drop_geometry() %>%
+  kable()%>%
+  kable_styling() %>%
+  scroll_box(
+    width = "600px", 
+    height = "600px", 
+    fixed_thead = TRUE
+  )
+  
+```
+
+Page 3
+=====================================     
+
+```{r}
+covid19_provincia = covid19_cantones %>%
+group_by(provincia) %>%
+summarize(confirmados = sum(confirmados, na.rm = TRUE))
+
+covid19_provincia.ordenado <- order(covid19_provincia$confirmados, decreasing=TRUE)
+
+covid19_provincia.confirmados <- covid19_provincia[covid19_provincia.ordenado,]
+
+ggplot(covid19_provincia, aes(x=reorder(provincia, -confirmados), y=confirmados)) +
+  ggtitle("Casos confirmados de Covid-19 en Costa Rica") +
+  xlab("Provincias") + 
+  ylab("Casos confirmados") +  
+  geom_col() +
+  geom_text(aes(label=confirmados), vjust=-0.3, size=3.5)
+```
+
+Page 4
+=====================================   
+```{r}
+covid19_cantones.orden <- order(covid19_cantones$canton)
+covid19_cantones.ordenadoxcanton <- covid19_cantones[covid19_cantones.orden,]
+
+kable(
+  covid19_cantones.ordenadoxcanton[, c("canton","recuperados","confirmados","muertes"), drop = TRUE], 
+  col.names=c("Cantón","Recuperados","Confirmados","Muertes"),  
+  caption="Casos de Covid19 por cantón en Costa Rica"
+) %>%
+kable_styling() %>%
+scroll_box(
+  width = "800px", 
+  height = "800px", 
+  fixed_thead = TRUE
+)
 
 ```
+
+Page 5
+=====================================   
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+### Confirmados
+
+```{r}
+## Value Box de total de casos confirmados
+covid19_cantones[is.na(covid19_cantones)] = 0
+suma <- sum(covid19_cantones$confirmados)           
+valueBox(suma, icon = "fa-users", color = "red")
+```
+
+### Recuperados
+
+```{r}
+covid19_cantones[is.na(covid19_cantones)] = 0
+suma <- sum(covid19_cantones$recuperados)           
+valueBox(suma, icon = "fa-users", color ="green")
+```
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+
+
+### Fallecidos
+
+```{r}
+covid19_cantones[is.na(covid19_cantones)] = 0
+suma <- sum(covid19_cantones$muertes)           
+valueBox(suma, icon = "fa-users", color = "black")
+```
+
+### Activos
+
+```{r}
+covid19_cantones[is.na(covid19_cantones)] = 0
+suma <- sum(covid19_cantones$activos)           
+valueBox(suma, icon = "fa-users", color = "orange")
+```
+
 
