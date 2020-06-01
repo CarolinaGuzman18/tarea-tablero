@@ -51,7 +51,7 @@ leaflet(covid19_cantones) %>%
     weight=0.3,
     popup = paste("Canton: ", covid19_cantones$canton, "<br>",
                    "Confirmados: ", covid19_cantones$confirmados, "<br>",
-                   "Fallecidos: ", covid19_cantones$fallecidos, "<br>",
+                   "Fallecidos: ", covid19_cantones$muertes, "<br>",
                   "Recuperados: ", covid19_cantones$recuperados,"<br>",
                   "Activos: ", covid19_cantones$activos, "<br>"))
 
@@ -120,7 +120,7 @@ leaflet(provincias_covid19) %>%
     weight=0.3,
     popup = paste("Provincia: ", provincias_covid19$provincia, "<br>",
                    "Confirmados: ", provincias_covid19$confirmados1, "<br>",
-                   "Fallecidos: ", provincias_covid19$fallecidos1, "<br>",
+                   "Fallecidos: ", provincias_covid19$muertes1, "<br>",
                   "Recuperados: ", provincias_covid19$recuperados1,"<br>",
                   "Activos: ", provincias_covid19$activos1, "<br>"))
 
